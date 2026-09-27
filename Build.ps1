@@ -18,6 +18,7 @@ $references = @(
     (Join-Path $managed 'UnityEngine.dll'),
     (Join-Path $managed 'UnityEngine.CoreModule.dll'),
     (Join-Path $managed 'UnityEngine.AudioModule.dll'),
+    (Join-Path $managed 'UnityEngine.InputLegacyModule.dll'),
     (Join-Path $managed 'UnityEngine.UnityWebRequestModule.dll'),
     (Join-Path $managed 'UnityEngine.UnityWebRequestAudioModule.dll')
 )
@@ -33,4 +34,3 @@ $arguments += $source
 & $compiler @arguments
 if ($LASTEXITCODE -ne 0) { throw "Compiler exited with code $LASTEXITCODE." }
 Write-Host "Built: $output"
-

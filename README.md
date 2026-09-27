@@ -11,6 +11,7 @@ No music is bundled with this project. Users provide their own MP3, OGG, or WAV 
 - Supports `.mp3`, `.ogg`, and `.wav` files in the same playlist.
 - Plays tracks alphabetically or in random order.
 - Automatically advances and repeats the playlist.
+- Lets you skip to the next or previous track with configurable keyboard or gamepad controls.
 - Provides a separate volume multiplier.
 - Keeps the official soundtrack muted when the custom folder is empty, if configured.
 - Falls back safely when an individual file cannot be decoded.
@@ -53,6 +54,13 @@ Available options:
 - `VolumeMultiplier`: adjust custom music relative to the game's music volume.
 - `MuteOriginalWhenNoTracks`: keep the official soundtrack silent if no custom tracks load.
 
+### Manual track controls
+
+- `F8`: next track.
+- `F7`: previous track.
+- `NextTrackKey` and `PreviousTrackKey`: change the keyboard shortcuts.
+- `NextTrackGamepadButton` and `PreviousTrackGamepadButton`: optionally assign controller buttons. They default to `None` so they do not conflict with gameplay controls. Values such as `JoystickButton4` and `JoystickButton5` can be used.
+
 ## How it works
 
 The game stores soundtrack clips in `GameManager.track` and plays them through voice channel 24. The plugin patches `GameManager.PlayTrack` and `GameManager.LoopTrack`, stops the official clip, and uses the same `AudioSource` for the custom playlist. This preserves the game's existing volume and pause behavior while leaving effects and voices untouched.
@@ -85,4 +93,3 @@ This project contains no copyrighted soundtrack files. Users are responsible for
 ## Português
 
 O mod substitui as músicas oficiais por arquivos pessoais MP3, OGG ou WAV sem alterar efeitos e vozes. Extraia a release na pasta de `v8so.exe` e coloque suas músicas em `BepInEx/plugins/VigilanteCustomMusic/Music`.
-

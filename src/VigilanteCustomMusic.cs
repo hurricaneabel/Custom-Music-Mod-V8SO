@@ -9,7 +9,7 @@ using HarmonyLib;
 using UnityEngine;
 using UnityEngine.Networking;
 
-[BepInPlugin("community.v8so.custommusic", "Vigilante Custom Music", "1.0.0")]
+[BepInPlugin("community.v8so.custommusic", "Vigilante Custom Music", "1.1.0")]
 public sealed class VigilanteCustomMusic : BaseUnityPlugin {
     private static VigilanteCustomMusic instance;
     private Harmony harmony;
@@ -19,6 +19,10 @@ public sealed class VigilanteCustomMusic : BaseUnityPlugin {
     private ConfigEntry<bool> shuffleConfig;
     private ConfigEntry<float> volumeConfig;
     private ConfigEntry<bool> muteWhenEmptyConfig;
+    private ConfigEntry<KeyCode> nextTrackKeyConfig;
+    private ConfigEntry<KeyCode> previousTrackKeyConfig;
+    private ConfigEntry<KeyCode> nextTrackGamepadConfig;
+    private ConfigEntry<KeyCode> previousTrackGamepadConfig;
     private FieldInfo voicesField;
     private AudioSource musicSource;
     private int currentIndex = -1;
@@ -39,6 +43,14 @@ public sealed class VigilanteCustomMusic : BaseUnityPlugin {
             new ConfigDescription("Custom music volume multiplier.", new AcceptableValueRange<float>(0f, 2f)));
         muteWhenEmptyConfig = Config.Bind("General", "MuteOriginalWhenNoTracks", true,
             "Keep the original soundtrack muted when no supported custom tracks were loaded.");
+        nextTrackKeyConfig = Config.Bind("Controls", "NextTrackKey", KeyCode.F8,
+            "Keyboard key used to play the next custom track.");
+        previousTrackKeyConfig = Config.Bind("Controls", "PreviousTrackKey", KeyCode.F7,
+            "Keyboard key used to play the previous custom track.");
+        nextTrackGamepadConfig = Config.Bind("Controls", "NextTrackGamepadButton", KeyCode.None,
+            "Optional gamepad button used for the next track, for example JoystickButton5. None disables it.");
+        previousTrackGamepadConfig = Config.Bind("Controls", "PreviousTrackGamepadButton", KeyCode.None,
+            "Optional gamepad button used for the previous track, for example JoystickButton4. None disables it.");
 
         Directory.CreateDirectory(MusicDirectory);
         Type gameManager = AccessTools.TypeByName("GameManager");
@@ -139,6 +151,28 @@ public sealed class VigilanteCustomMusic : BaseUnityPlugin {
         Logger.LogInfo("Now playing: " + musicSource.clip.name);
     }
 
+    private void PlayPrevious() {
+        ResolveMusicSource();
+        if (musicSource == null || playlist.Count == 0) return;
+        currentIndex = currentIndex <= 0 ? playlist.Count - 1 : currentIndex - 1;
+        PlayCurrent();
+    }
+
+    private void PlayCurrent() {
+        if (musicSource == null || playlist.Count == 0 || currentIndex < 0) return;
+        musicSource.Stop();
+        musicSource.clip = playlist[currentIndex];
+        musicSource.loop = playlist.Count == 1;
+        musicSource.volume = Mathf.Clamp01(gameMusicVolume * volumeConfig.Value);
+        musicSource.Play();
+        playbackGuard = Time.unscaledTime + 1f;
+        Logger.LogInfo("Now playing: " + musicSource.clip.name);
+    }
+
+    private bool WasPressed(ConfigEntry<KeyCode> binding) {
+        return binding != null && binding.Value != KeyCode.None && Input.GetKeyDown(binding.Value);
+    }
+
     private void ApplyLoopMode() {
         if (!enabledConfig.Value || musicSource == null || musicSource.clip == null) return;
         if (playlist.Contains(musicSource.clip)) musicSource.loop = playlist.Count == 1;
@@ -147,7 +181,16 @@ public sealed class VigilanteCustomMusic : BaseUnityPlugin {
     private void Update() {
         if (!enabledConfig.Value || loading || !trackRequested || playlist.Count == 0) return;
         ResolveMusicSource();
-        if (musicSource == null || AudioListener.pause || Time.unscaledTime < playbackGuard) return;
+        if (musicSource == null) return;
+        if (WasPressed(nextTrackKeyConfig) || WasPressed(nextTrackGamepadConfig)) {
+            PlayNext(false);
+            return;
+        }
+        if (WasPressed(previousTrackKeyConfig) || WasPressed(previousTrackGamepadConfig)) {
+            PlayPrevious();
+            return;
+        }
+        if (AudioListener.pause || Time.unscaledTime < playbackGuard) return;
         if (playlist.Contains(musicSource.clip) && !musicSource.isPlaying) PlayNext(false);
     }
 
