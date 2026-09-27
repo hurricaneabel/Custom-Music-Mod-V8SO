@@ -63,7 +63,7 @@ Available options:
 - `NextTrackKey` and `PreviousTrackKey`: change the keyboard shortcuts.
 - `NextTrackGamepadButton` and `PreviousTrackGamepadButton`: optionally assign controller buttons. They default to `None` so they do not conflict with gameplay controls. Values such as `JoystickButton4` and `JoystickButton5` can be used.
 - `RightStickControls`: enable or disable all right-stick shortcuts.
-- `RightStickHorizontalAxisId`, `RightStickClickButtonId`, and `RightStickThreshold`: adjust physical Rewired input detection for a different controller.
+- `RightStickHorizontalAxisIndex`, `RightStickClickButtonIndex`, and `RightStickThreshold`: adjust physical Rewired input detection for a different controller.
 
 ## How it works
 

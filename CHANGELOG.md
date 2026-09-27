@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.2.1
+
+- Fix right-stick controls on Raw Input controllers by reading physical axis and button indexes instead of Rewired element ids.
+- Log the detected controller and its available axis/button counts once for troubleshooting.
+
 ## 1.2.0
 
 - Move to the next or previous track by flicking the right stick right or left.

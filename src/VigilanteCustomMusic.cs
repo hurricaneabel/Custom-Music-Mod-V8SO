@@ -10,7 +10,7 @@ using Rewired;
 using UnityEngine;
 using UnityEngine.Networking;
 
-[BepInPlugin("community.v8so.custommusic", "Vigilante Custom Music", "1.2.0")]
+[BepInPlugin("community.v8so.custommusic", "Vigilante Custom Music", "1.2.1")]
 public sealed class VigilanteCustomMusic : BaseUnityPlugin {
     private static VigilanteCustomMusic instance;
     private Harmony harmony;
@@ -25,8 +25,8 @@ public sealed class VigilanteCustomMusic : BaseUnityPlugin {
     private ConfigEntry<KeyCode> nextTrackGamepadConfig;
     private ConfigEntry<KeyCode> previousTrackGamepadConfig;
     private ConfigEntry<bool> rightStickControlsConfig;
-    private ConfigEntry<int> rightStickHorizontalAxisIdConfig;
-    private ConfigEntry<int> rightStickClickButtonIdConfig;
+    private ConfigEntry<int> rightStickHorizontalAxisIndexConfig;
+    private ConfigEntry<int> rightStickClickButtonIndexConfig;
     private ConfigEntry<float> rightStickThresholdConfig;
     private FieldInfo voicesField;
     private AudioSource musicSource;
@@ -37,6 +37,7 @@ public sealed class VigilanteCustomMusic : BaseUnityPlugin {
     private float gameMusicVolume = 1f;
     private bool rightStickHorizontalLatched;
     private bool rewiredPollingWarningLogged;
+    private bool rewiredControllerLogged;
 
     private string MusicDirectory {
         get { return Path.Combine(Paths.PluginPath, "VigilanteCustomMusic", "Music"); }
@@ -60,10 +61,10 @@ public sealed class VigilanteCustomMusic : BaseUnityPlugin {
             "Optional gamepad button used for the previous track, for example JoystickButton4. None disables it.");
         rightStickControlsConfig = Config.Bind("Controls", "RightStickControls", true,
             "Use the right stick for track controls: right/left changes track and clicking toggles shuffle.");
-        rightStickHorizontalAxisIdConfig = Config.Bind("Controls", "RightStickHorizontalAxisId", 3,
-            "Rewired element id for the right stick horizontal axis.");
-        rightStickClickButtonIdConfig = Config.Bind("Controls", "RightStickClickButtonId", 9,
-            "Rewired element id for the right stick click button.");
+        rightStickHorizontalAxisIndexConfig = Config.Bind("Controls", "RightStickHorizontalAxisIndex", 3,
+            "Rewired physical axis index for the right stick horizontal axis.");
+        rightStickClickButtonIndexConfig = Config.Bind("Controls", "RightStickClickButtonIndex", 9,
+            "Rewired physical button index for the right stick click button.");
         rightStickThresholdConfig = Config.Bind("Controls", "RightStickThreshold", 0.75f,
             new ConfigDescription("How far the stick must move before changing tracks.",
                 new AcceptableValueRange<float>(0.5f, 0.95f)));
@@ -198,13 +199,22 @@ public sealed class VigilanteCustomMusic : BaseUnityPlugin {
                 Joystick joystick = joysticks[i];
                 if (joystick == null || !joystick.isConnected || !joystick.enabled) continue;
 
-                if (joystick.GetButtonDownById(rightStickClickButtonIdConfig.Value)) {
+                if (!rewiredControllerLogged) {
+                    rewiredControllerLogged = true;
+                    Logger.LogInfo("Right-stick controls connected to '" + joystick.name + "' (axes=" +
+                        joystick.axisCount + ", buttons=" + joystick.buttonCount + ").");
+                }
+
+                int buttonIndex = rightStickClickButtonIndexConfig.Value;
+                if (buttonIndex >= 0 && buttonIndex < joystick.buttonCount && joystick.GetButtonDown(buttonIndex)) {
                     shuffleConfig.Value = !shuffleConfig.Value;
                     Logger.LogInfo("Playback mode: " + (shuffleConfig.Value ? "shuffle" : "sequential"));
                     return true;
                 }
 
-                float horizontal = joystick.GetAxisRawById(rightStickHorizontalAxisIdConfig.Value);
+                int axisIndex = rightStickHorizontalAxisIndexConfig.Value;
+                if (axisIndex < 0 || axisIndex >= joystick.axisCount) continue;
+                float horizontal = joystick.GetAxisRaw(axisIndex);
                 if (Mathf.Abs(horizontal) >= rightStickThresholdConfig.Value) {
                     centered = false;
                     if (!rightStickHorizontalLatched) {
