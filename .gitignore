@@ -1,0 +1,11 @@
+*.user
+*.suo
+*.pdb
+obj/
+bin/
+BepInEx/
+v8so_Data/
+Music/*.mp3
+Music/*.ogg
+Music/*.wav
+

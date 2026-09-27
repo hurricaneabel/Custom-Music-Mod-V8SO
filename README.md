@@ -85,3 +85,4 @@ This project contains no copyrighted soundtrack files. Users are responsible for
 ## Português
 
 O mod substitui as músicas oficiais por arquivos pessoais MP3, OGG ou WAV sem alterar efeitos e vozes. Extraia a release na pasta de `v8so.exe` e coloque suas músicas em `BepInEx/plugins/VigilanteCustomMusic/Music`.
+
