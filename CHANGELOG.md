@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.2.0
+
+- Move to the next or previous track by flicking the right stick right or left.
+- Toggle sequential and shuffle playback by clicking the right stick.
+- Add configurable Rewired axis, button, and activation threshold values.
+- Require the stick to return to center before another track change.
+
 ## 1.1.0
 
 - Add configurable next-track and previous-track keyboard shortcuts.

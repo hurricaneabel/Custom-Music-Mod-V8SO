@@ -6,10 +6,11 @@ using System.Reflection;
 using BepInEx;
 using BepInEx.Configuration;
 using HarmonyLib;
+using Rewired;
 using UnityEngine;
 using UnityEngine.Networking;
 
-[BepInPlugin("community.v8so.custommusic", "Vigilante Custom Music", "1.1.0")]
+[BepInPlugin("community.v8so.custommusic", "Vigilante Custom Music", "1.2.0")]
 public sealed class VigilanteCustomMusic : BaseUnityPlugin {
     private static VigilanteCustomMusic instance;
     private Harmony harmony;
@@ -23,6 +24,10 @@ public sealed class VigilanteCustomMusic : BaseUnityPlugin {
     private ConfigEntry<KeyCode> previousTrackKeyConfig;
     private ConfigEntry<KeyCode> nextTrackGamepadConfig;
     private ConfigEntry<KeyCode> previousTrackGamepadConfig;
+    private ConfigEntry<bool> rightStickControlsConfig;
+    private ConfigEntry<int> rightStickHorizontalAxisIdConfig;
+    private ConfigEntry<int> rightStickClickButtonIdConfig;
+    private ConfigEntry<float> rightStickThresholdConfig;
     private FieldInfo voicesField;
     private AudioSource musicSource;
     private int currentIndex = -1;
@@ -30,6 +35,8 @@ public sealed class VigilanteCustomMusic : BaseUnityPlugin {
     private bool trackRequested;
     private float playbackGuard;
     private float gameMusicVolume = 1f;
+    private bool rightStickHorizontalLatched;
+    private bool rewiredPollingWarningLogged;
 
     private string MusicDirectory {
         get { return Path.Combine(Paths.PluginPath, "VigilanteCustomMusic", "Music"); }
@@ -51,6 +58,15 @@ public sealed class VigilanteCustomMusic : BaseUnityPlugin {
             "Optional gamepad button used for the next track, for example JoystickButton5. None disables it.");
         previousTrackGamepadConfig = Config.Bind("Controls", "PreviousTrackGamepadButton", KeyCode.None,
             "Optional gamepad button used for the previous track, for example JoystickButton4. None disables it.");
+        rightStickControlsConfig = Config.Bind("Controls", "RightStickControls", true,
+            "Use the right stick for track controls: right/left changes track and clicking toggles shuffle.");
+        rightStickHorizontalAxisIdConfig = Config.Bind("Controls", "RightStickHorizontalAxisId", 3,
+            "Rewired element id for the right stick horizontal axis.");
+        rightStickClickButtonIdConfig = Config.Bind("Controls", "RightStickClickButtonId", 9,
+            "Rewired element id for the right stick click button.");
+        rightStickThresholdConfig = Config.Bind("Controls", "RightStickThreshold", 0.75f,
+            new ConfigDescription("How far the stick must move before changing tracks.",
+                new AcceptableValueRange<float>(0.5f, 0.95f)));
 
         Directory.CreateDirectory(MusicDirectory);
         Type gameManager = AccessTools.TypeByName("GameManager");
@@ -173,6 +189,42 @@ public sealed class VigilanteCustomMusic : BaseUnityPlugin {
         return binding != null && binding.Value != KeyCode.None && Input.GetKeyDown(binding.Value);
     }
 
+    private bool PollRightStickControls() {
+        if (!rightStickControlsConfig.Value || !ReInput.isReady) return false;
+        try {
+            IList<Joystick> joysticks = ReInput.controllers.Joysticks;
+            bool centered = true;
+            for (int i = 0; i < joysticks.Count; i++) {
+                Joystick joystick = joysticks[i];
+                if (joystick == null || !joystick.isConnected || !joystick.enabled) continue;
+
+                if (joystick.GetButtonDownById(rightStickClickButtonIdConfig.Value)) {
+                    shuffleConfig.Value = !shuffleConfig.Value;
+                    Logger.LogInfo("Playback mode: " + (shuffleConfig.Value ? "shuffle" : "sequential"));
+                    return true;
+                }
+
+                float horizontal = joystick.GetAxisRawById(rightStickHorizontalAxisIdConfig.Value);
+                if (Mathf.Abs(horizontal) >= rightStickThresholdConfig.Value) {
+                    centered = false;
+                    if (!rightStickHorizontalLatched) {
+                        rightStickHorizontalLatched = true;
+                        if (horizontal > 0f) PlayNext(false);
+                        else PlayPrevious();
+                        return true;
+                    }
+                }
+            }
+            if (centered) rightStickHorizontalLatched = false;
+        } catch (Exception ex) {
+            if (!rewiredPollingWarningLogged) {
+                rewiredPollingWarningLogged = true;
+                Logger.LogWarning("Could not read right-stick controls: " + ex.Message);
+            }
+        }
+        return false;
+    }
+
     private void ApplyLoopMode() {
         if (!enabledConfig.Value || musicSource == null || musicSource.clip == null) return;
         if (playlist.Contains(musicSource.clip)) musicSource.loop = playlist.Count == 1;
@@ -182,6 +234,7 @@ public sealed class VigilanteCustomMusic : BaseUnityPlugin {
         if (!enabledConfig.Value || loading || !trackRequested || playlist.Count == 0) return;
         ResolveMusicSource();
         if (musicSource == null) return;
+        if (PollRightStickControls()) return;
         if (WasPressed(nextTrackKeyConfig) || WasPressed(nextTrackGamepadConfig)) {
             PlayNext(false);
             return;

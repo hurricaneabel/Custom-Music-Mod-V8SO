@@ -19,6 +19,7 @@ $references = @(
     (Join-Path $managed 'UnityEngine.CoreModule.dll'),
     (Join-Path $managed 'UnityEngine.AudioModule.dll'),
     (Join-Path $managed 'UnityEngine.InputLegacyModule.dll'),
+    (Join-Path $managed 'Rewired_Core.dll'),
     (Join-Path $managed 'UnityEngine.UnityWebRequestModule.dll'),
     (Join-Path $managed 'UnityEngine.UnityWebRequestAudioModule.dll')
 )

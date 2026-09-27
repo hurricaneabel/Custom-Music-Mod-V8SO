@@ -58,8 +58,12 @@ Available options:
 
 - `F8`: next track.
 - `F7`: previous track.
+- Right stick right/left: next/previous track.
+- Right-stick click: toggle between sequential and shuffle playback. The selected mode is saved in the configuration.
 - `NextTrackKey` and `PreviousTrackKey`: change the keyboard shortcuts.
 - `NextTrackGamepadButton` and `PreviousTrackGamepadButton`: optionally assign controller buttons. They default to `None` so they do not conflict with gameplay controls. Values such as `JoystickButton4` and `JoystickButton5` can be used.
+- `RightStickControls`: enable or disable all right-stick shortcuts.
+- `RightStickHorizontalAxisId`, `RightStickClickButtonId`, and `RightStickThreshold`: adjust physical Rewired input detection for a different controller.
 
 ## How it works
 
