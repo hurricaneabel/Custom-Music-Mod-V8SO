@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.3.0
+
+- Enable shuffle by default for new installations.
+- Replace individual random picks with a Fisher-Yates shuffled queue.
+- Play every track once before reshuffling the full playlist.
+- Generate a fresh random order on each game launch and whenever shuffle is enabled with R3.
+- Make previous-track navigation follow the active shuffled order.
+
 ## 1.2.2
 
 - Detect the right-stick horizontal axis from the Rewired element name.

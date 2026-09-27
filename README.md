@@ -9,7 +9,8 @@ No music is bundled with this project. Users provide their own MP3, OGG, or WAV 
 - Replaces the original menu and gameplay music at runtime.
 - Preserves sound effects, vehicle sounds, interface sounds, and voices.
 - Supports `.mp3`, `.ogg`, and `.wav` files in the same playlist.
-- Plays tracks alphabetically or in random order.
+- Plays tracks alphabetically or with a fully shuffled queue.
+- In shuffle mode, every track plays once before a new order is generated.
 - Automatically advances and repeats the playlist.
 - Lets you skip to the next or previous track with configurable keyboard or gamepad controls.
 - Provides a separate volume multiplier.
@@ -50,7 +51,7 @@ BepInEx/config/community.v8so.custommusic.cfg
 Available options:
 
 - `Enabled`: enable or disable soundtrack replacement.
-- `Shuffle`: choose random tracks instead of alphabetical order.
+- `Shuffle`: use a newly shuffled playlist order on every game launch. Enabled by default.
 - `VolumeMultiplier`: adjust custom music relative to the game's music volume.
 - `MuteOriginalWhenNoTracks`: keep the official soundtrack silent if no custom tracks load.
 

@@ -10,12 +10,13 @@ using Rewired;
 using UnityEngine;
 using UnityEngine.Networking;
 
-[BepInPlugin("community.v8so.custommusic", "Vigilante Custom Music", "1.2.2")]
+[BepInPlugin("community.v8so.custommusic", "Vigilante Custom Music", "1.3.0")]
 public sealed class VigilanteCustomMusic : BaseUnityPlugin {
     private static VigilanteCustomMusic instance;
     private Harmony harmony;
     private readonly List<AudioClip> playlist = new List<AudioClip>();
-    private readonly System.Random random = new System.Random();
+    private readonly List<int> shuffleOrder = new List<int>();
+    private readonly System.Random random = new System.Random(Guid.NewGuid().GetHashCode());
     private ConfigEntry<bool> enabledConfig;
     private ConfigEntry<bool> shuffleConfig;
     private ConfigEntry<float> volumeConfig;
@@ -31,6 +32,7 @@ public sealed class VigilanteCustomMusic : BaseUnityPlugin {
     private FieldInfo voicesField;
     private AudioSource musicSource;
     private int currentIndex = -1;
+    private int shufflePosition = -1;
     private bool loading;
     private bool trackRequested;
     private float playbackGuard;
@@ -47,7 +49,8 @@ public sealed class VigilanteCustomMusic : BaseUnityPlugin {
     private void Awake() {
         instance = this;
         enabledConfig = Config.Bind("General", "Enabled", true, "Replace the original soundtrack with the custom playlist.");
-        shuffleConfig = Config.Bind("Playback", "Shuffle", false, "Choose a random track instead of alphabetical order.");
+        shuffleConfig = Config.Bind("Playback", "Shuffle", true,
+            "Shuffle the complete playlist so every track plays once before the order is reshuffled.");
         volumeConfig = Config.Bind("Playback", "VolumeMultiplier", 1.0f,
             new ConfigDescription("Custom music volume multiplier.", new AcceptableValueRange<float>(0f, 2f)));
         muteWhenEmptyConfig = Config.Bind("General", "MuteOriginalWhenNoTracks", true,
@@ -154,9 +157,10 @@ public sealed class VigilanteCustomMusic : BaseUnityPlugin {
         ResolveMusicSource();
         if (musicSource == null || playlist.Count == 0) return;
         if (shuffleConfig.Value && playlist.Count > 1) {
-            int next;
-            do { next = random.Next(playlist.Count); } while (!firstTrack && next == currentIndex);
-            currentIndex = next;
+            if (shuffleOrder.Count != playlist.Count || shufflePosition >= shuffleOrder.Count - 1)
+                BuildShuffleOrder(false);
+            shufflePosition++;
+            currentIndex = shuffleOrder[shufflePosition];
         } else {
             currentIndex = firstTrack || currentIndex < 0 ? 0 : (currentIndex + 1) % playlist.Count;
         }
@@ -172,8 +176,36 @@ public sealed class VigilanteCustomMusic : BaseUnityPlugin {
     private void PlayPrevious() {
         ResolveMusicSource();
         if (musicSource == null || playlist.Count == 0) return;
-        currentIndex = currentIndex <= 0 ? playlist.Count - 1 : currentIndex - 1;
+        if (shuffleConfig.Value && shuffleOrder.Count == playlist.Count) {
+            shufflePosition = shufflePosition <= 0 ? shuffleOrder.Count - 1 : shufflePosition - 1;
+            currentIndex = shuffleOrder[shufflePosition];
+        } else {
+            currentIndex = currentIndex <= 0 ? playlist.Count - 1 : currentIndex - 1;
+        }
         PlayCurrent();
+    }
+
+    private void BuildShuffleOrder(bool keepCurrentFirst) {
+        shuffleOrder.Clear();
+        for (int i = 0; i < playlist.Count; i++) shuffleOrder.Add(i);
+        for (int i = shuffleOrder.Count - 1; i > 0; i--) {
+            int swapIndex = random.Next(i + 1);
+            int value = shuffleOrder[i];
+            shuffleOrder[i] = shuffleOrder[swapIndex];
+            shuffleOrder[swapIndex] = value;
+        }
+
+        shufflePosition = -1;
+        if (keepCurrentFirst && currentIndex >= 0) {
+            int currentPosition = shuffleOrder.IndexOf(currentIndex);
+            if (currentPosition > 0) {
+                int first = shuffleOrder[0];
+                shuffleOrder[0] = currentIndex;
+                shuffleOrder[currentPosition] = first;
+            }
+            shufflePosition = 0;
+        }
+        Logger.LogInfo("Playlist shuffled: " + shuffleOrder.Count + " track(s) in a new order.");
     }
 
     private void PlayCurrent() {
@@ -209,6 +241,11 @@ public sealed class VigilanteCustomMusic : BaseUnityPlugin {
                 int buttonIndex = rightStickClickButtonIndexConfig.Value;
                 if (buttonIndex >= 0 && buttonIndex < joystick.buttonCount && joystick.GetButtonDown(buttonIndex)) {
                     shuffleConfig.Value = !shuffleConfig.Value;
+                    if (shuffleConfig.Value) BuildShuffleOrder(true);
+                    else {
+                        shuffleOrder.Clear();
+                        shufflePosition = -1;
+                    }
                     Logger.LogInfo("Playback mode: " + (shuffleConfig.Value ? "shuffle" : "sequential"));
                     return true;
                 }
@@ -289,6 +326,7 @@ public sealed class VigilanteCustomMusic : BaseUnityPlugin {
         if (harmony != null) harmony.UnpatchSelf();
         foreach (AudioClip clip in playlist) if (clip != null) Destroy(clip);
         playlist.Clear();
+        shuffleOrder.Clear();
         if (instance == this) instance = null;
     }
 }
