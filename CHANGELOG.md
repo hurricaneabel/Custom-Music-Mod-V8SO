@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.2.2
+
+- Detect the right-stick horizontal axis from the Rewired element name.
+- Use axis index 2 for the four-axis XInput layout reported by the gamepad fix.
+- Migrate the previous Raw Input fallback automatically when an existing config still contains index 3.
+
 ## 1.2.1
 
 - Fix right-stick controls on Raw Input controllers by reading physical axis and button indexes instead of Rewired element ids.

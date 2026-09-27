@@ -10,7 +10,7 @@ using Rewired;
 using UnityEngine;
 using UnityEngine.Networking;
 
-[BepInPlugin("community.v8so.custommusic", "Vigilante Custom Music", "1.2.1")]
+[BepInPlugin("community.v8so.custommusic", "Vigilante Custom Music", "1.2.2")]
 public sealed class VigilanteCustomMusic : BaseUnityPlugin {
     private static VigilanteCustomMusic instance;
     private Harmony harmony;
@@ -38,6 +38,7 @@ public sealed class VigilanteCustomMusic : BaseUnityPlugin {
     private bool rightStickHorizontalLatched;
     private bool rewiredPollingWarningLogged;
     private bool rewiredControllerLogged;
+    private int resolvedRightStickAxisIndex = -1;
 
     private string MusicDirectory {
         get { return Path.Combine(Paths.PluginPath, "VigilanteCustomMusic", "Music"); }
@@ -61,7 +62,7 @@ public sealed class VigilanteCustomMusic : BaseUnityPlugin {
             "Optional gamepad button used for the previous track, for example JoystickButton4. None disables it.");
         rightStickControlsConfig = Config.Bind("Controls", "RightStickControls", true,
             "Use the right stick for track controls: right/left changes track and clicking toggles shuffle.");
-        rightStickHorizontalAxisIndexConfig = Config.Bind("Controls", "RightStickHorizontalAxisIndex", 3,
+        rightStickHorizontalAxisIndexConfig = Config.Bind("Controls", "RightStickHorizontalAxisIndex", 2,
             "Rewired physical axis index for the right stick horizontal axis.");
         rightStickClickButtonIndexConfig = Config.Bind("Controls", "RightStickClickButtonIndex", 9,
             "Rewired physical button index for the right stick click button.");
@@ -212,7 +213,7 @@ public sealed class VigilanteCustomMusic : BaseUnityPlugin {
                     return true;
                 }
 
-                int axisIndex = rightStickHorizontalAxisIndexConfig.Value;
+                int axisIndex = ResolveRightStickAxisIndex(joystick);
                 if (axisIndex < 0 || axisIndex >= joystick.axisCount) continue;
                 float horizontal = joystick.GetAxisRaw(axisIndex);
                 if (Mathf.Abs(horizontal) >= rightStickThresholdConfig.Value) {
@@ -233,6 +234,33 @@ public sealed class VigilanteCustomMusic : BaseUnityPlugin {
             }
         }
         return false;
+    }
+
+    private int ResolveRightStickAxisIndex(Joystick joystick) {
+        if (resolvedRightStickAxisIndex >= 0 && resolvedRightStickAxisIndex < joystick.axisCount)
+            return resolvedRightStickAxisIndex;
+
+        IList<ControllerElementIdentifier> identifiers = joystick.AxisElementIdentifiers;
+        for (int i = 0; i < identifiers.Count && i < joystick.axisCount; i++) {
+            string name = identifiers[i] == null ? "" : identifiers[i].name;
+            string lower = name == null ? "" : name.ToLowerInvariant();
+            if (lower.Contains("right") &&
+                (lower.Contains("stick") || lower.Contains("thumb")) &&
+                (lower.Contains(" x") || lower.EndsWith("x") || lower.Contains("horizontal"))) {
+                resolvedRightStickAxisIndex = i;
+                Logger.LogInfo("Right-stick horizontal axis detected at index " + i + " ('" + name + "').");
+                return i;
+            }
+        }
+
+        int configured = rightStickHorizontalAxisIndexConfig.Value;
+        if (joystick.axisCount == 4 && configured == 3 &&
+            joystick.name.IndexOf("XInput", StringComparison.OrdinalIgnoreCase) >= 0) {
+            configured = 2;
+            Logger.LogInfo("Using XInput right-stick horizontal fallback at axis index 2.");
+        }
+        resolvedRightStickAxisIndex = configured;
+        return configured;
     }
 
     private void ApplyLoopMode() {

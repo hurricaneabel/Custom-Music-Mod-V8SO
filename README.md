@@ -65,6 +65,8 @@ Available options:
 - `RightStickControls`: enable or disable all right-stick shortcuts.
 - `RightStickHorizontalAxisIndex`, `RightStickClickButtonIndex`, and `RightStickThreshold`: adjust physical Rewired input detection for a different controller.
 
+The plugin detects the named right-stick horizontal axis automatically. Its fallback is index `2` for XInput and remains compatible with the older Raw Input layout.
+
 ## How it works
 
 The game stores soundtrack clips in `GameManager.track` and plays them through voice channel 24. The plugin patches `GameManager.PlayTrack` and `GameManager.LoopTrack`, stops the official clip, and uses the same `AudioSource` for the custom playlist. This preserves the game's existing volume and pause behavior while leaving effects and voices untouched.
